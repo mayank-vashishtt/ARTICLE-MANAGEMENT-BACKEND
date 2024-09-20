@@ -6,10 +6,7 @@ const cors = require('cors');
 const app = express();
 
 // Use CORS middleware and specify origin as localhost:3000
-app.use(cors({
-  origin: 'http://localhost:3000',  // Frontend URL
-  credentials: true,  // Allow credentials (if needed)
-}));
+app.use(cors());
 
 app.use(express.json());  // Parse incoming JSON requests
 
