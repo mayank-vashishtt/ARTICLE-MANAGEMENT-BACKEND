@@ -36,6 +36,10 @@ router.post('/register', async (req, res) => {
 
 // Login a user
 router.post('/login', async (req, res) => {
+  console.log('Request reached to server for logging in');
+  console.log(req.body);
+  
+  
   const { email, password } = req.body;
 
   if (!email || !password) {
