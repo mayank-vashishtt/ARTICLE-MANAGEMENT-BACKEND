@@ -1,9 +1,10 @@
 const express = require('express');
 const Article = require('../models/Article');  // Ensure the Article model is correctly imported
+const authMiddleware = require('../middleware/auth');  // JWT authentication middleware
 const router = express.Router();
 
-// POST /api/articles - Add a new article
-router.post('/', async (req, res) => {
+// POST /api/articles - Add a new article (Protected)
+router.post('/', authMiddleware, async (req, res) => {
   try {
     const { title, description, text, imageUrl, videoUrl } = req.body;
 
@@ -19,6 +20,7 @@ router.post('/', async (req, res) => {
       videoUrl,
       likes: 0,
       publishDate: new Date(),
+      author: req.user.id,  // Set the article's author as the logged-in user's ID
     });
 
     const article = await newArticle.save();
@@ -29,7 +31,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET /api/articles - Fetch all articles, with sorting
+// GET /api/articles - Fetch all articles, with sorting (Public)
 router.get('/', async (req, res) => {
   const sortOption = req.query.sort || 'date';  // Default to sorting by date
 
@@ -43,7 +45,7 @@ router.get('/', async (req, res) => {
   }
 
   try {
-    const articles = await Article.find().sort(sortQuery);
+    const articles = await Article.find().sort(sortQuery).populate('author', 'email');  // Optionally populate author email
     res.json(articles);
   } catch (err) {
     console.error('Error fetching articles:', err.message);
@@ -51,8 +53,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/articles/:id/like - Like an article by its ID
-router.post('/:id/like', async (req, res) => {
+// POST /api/articles/:id/like - Like an article by its ID (Protected)
+router.post('/:id/like', authMiddleware, async (req, res) => {
   try {
     const article = await Article.findById(req.params.id);  // Find the article by its ID
     if (!article) {
@@ -69,8 +71,8 @@ router.post('/:id/like', async (req, res) => {
   }
 });
 
-// PUT /api/articles/:id - Update an article by its ID
-router.put('/:id', async (req, res) => {
+// PUT /api/articles/:id - Update an article by its ID (Protected, Author Only)
+router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const { title, description, text, imageUrl, videoUrl } = req.body;
 
@@ -78,6 +80,11 @@ router.put('/:id', async (req, res) => {
     let article = await Article.findById(req.params.id);
     if (!article) {
       return res.status(404).json({ msg: 'Article not found' });
+    }
+
+    // Check if the logged-in user is the author of the article
+    if (article.author.toString() !== req.user.id) {
+      return res.status(403).json({ msg: 'Not authorized to edit this article' });
     }
 
     // Update the article fields with the new data
